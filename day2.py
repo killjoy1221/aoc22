@@ -11,25 +11,18 @@ class Move(Enum):
     def score(self):
         return Move._member_names_.index(self.name) + 1
 
+    def _get_next(self, direction: int):
+        index = (Move._member_names_.index(self.name) + direction) % 3
+        name = Move._member_names_[index]
+        return Move[name]
+
     @property
     def wins_against(self):
-        if self is Move.ROCK:
-            return self.SCISSORS
-        if self is Move.PAPER:
-            return self.ROCK
-        if self is Move.SCISSORS:
-            return self.PAPER
-        raise AssertionError()
+        return self._get_next(-1)
 
     @property
     def loses_to(self):
-        if self is Move.ROCK:
-            return self.PAPER
-        if self is Move.PAPER:
-            return self.SCISSORS
-        if self is Move.SCISSORS:
-            return self.ROCK
-        raise AssertionError()
+        return self._get_next(1)
 
 
 class ShouldWinOrLose(Enum):
@@ -43,22 +36,12 @@ def get_winner(p1: Move, p2: Move):
 
     Returns -1 for player 1, 1 for player 2, 0 or tie
     """
+    if p1.loses_to is p2:
+        return 1
+    if p2.loses_to is p1:
+        return -1
 
-    def get_winning_move():
-        if p1 is p2:
-            # It's a tie
-            return None
-
-        moveset = {p1, p2}
-        if moveset == {Move.ROCK, Move.PAPER}:
-            return Move.PAPER  # paper covers rock
-        if moveset == {Move.PAPER, Move.SCISSORS}:
-            return Move.SCISSORS  # scissors cuts paper
-        if moveset == {Move.SCISSORS, Move.ROCK}:
-            return Move.ROCK  # rock smashes scissors
-
-    winning_move = get_winning_move()
-    return [p1, None, p2].index(winning_move) - 1
+    return 0
 
 
 def get_next_move(move: Move, win_or_lose: ShouldWinOrLose):
