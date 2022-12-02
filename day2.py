@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Literal
+from typing import Iterable, Literal
 
 
 class Move(Enum):
@@ -25,10 +25,14 @@ class Move(Enum):
         return self._get_next(1)
 
 
-class ShouldWinOrLose(Enum):
+class MatchResult(Enum):
     LOSE = "X"
     DRAW = "Y"
     WIN = "Z"
+
+    @property
+    def score(self):
+        return MatchResult._member_names_.index(self.name) * 3
 
 
 def get_winner(p1: Move, p2: Move):
@@ -44,36 +48,30 @@ def get_winner(p1: Move, p2: Move):
     return 0
 
 
-def get_next_move(move: Move, win_or_lose: ShouldWinOrLose):
-    if win_or_lose is ShouldWinOrLose.DRAW:
+def get_next_move(move: Move, win_or_lose: MatchResult):
+    if win_or_lose is MatchResult.DRAW:
         return move
-    if win_or_lose is ShouldWinOrLose.WIN:
+    if win_or_lose is MatchResult.WIN:
         return move.loses_to
-    if win_or_lose is ShouldWinOrLose.LOSE:
+    if win_or_lose is MatchResult.LOSE:
         return move.wins_against
 
 
 class Game:
     def __init__(self):
-        self.p1_score = 0
-        self.p2_score = 0
+        self.score = 0
 
-    def move(self, p1: Move, p2: Move):
+    def play_round(self, opponent: Move, own: Move) -> MatchResult:
+        if opponent.loses_to is own:
+            return MatchResult.WIN
+        if own.loses_to is opponent:
+            return MatchResult.LOSE
 
-        self.p1_score += p1.score
-        self.p2_score += p2.score
+        return MatchResult.DRAW
 
-        winner = get_winner(p1, p2)
-        if winner == -1:
-            # player 1 won
-            self.p1_score += 6
-        elif winner == 0:
-            # it's a draw
-            self.p1_score += 3
-            self.p2_score += 3
-        elif winner == 1:
-            # player 2 won
-            self.p2_score += 6
+    def play(self, moves: Iterable[tuple[Move, Move]]):
+        for opponent, own in moves:
+            self.score += own.score + self.play_round(opponent, own).score
 
 
 ABC = Literal["A", "B", "C"]
@@ -87,29 +85,29 @@ def parse_data(data: str) -> MoveData:
 
 def main(data: str):
     movedata = parse_data(data)
-    part1(movedata)
-    part2(movedata)
+    print("Part 1:", part1(movedata))
+    print("Part 2:", part2(movedata))
 
 
 def part1(data: MoveData):
     move_map = {"X": "A", "Y": "B", "Z": "C"}
 
-    game = Game()
-    for p1_move, p2_move in data:
-        p2_move = move_map.get(p2_move)
-        p1 = Move(p1_move)
-        p2 = Move(p2_move)
-        game.move(p1, p2)
+    def map_data(line: tuple[ABC, XYZ]):
+        a, b = line
+        return Move(a), Move(move_map[b])
 
-    print("Part 1:", game.p2_score)
+    game = Game()
+    game.play(map(map_data, data))
+    return game.score
 
 
 def part2(data: MoveData):
-    game = Game()
-    for a, b in data:
+    def map_data(line: tuple[ABC, XYZ]):
+        a, b = line
         move = Move(a)
-        winorlose = ShouldWinOrLose(b)
-        next_move = get_next_move(move, winorlose)
-        game.move(move, next_move)
+        result = MatchResult(b)
+        return move, get_next_move(move, result)
 
-    print("Part 2:", game.p2_score)
+    game = Game()
+    game.play(map(map_data, data))
+    return game.score
