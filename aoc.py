@@ -1,35 +1,52 @@
-#!/usr/bin/python3
-import argparse
+#!/usr/bin/env python3
 import sys
 import importlib
+import typer
+import click
+
+from pathlib import Path
+
+app = typer.Typer(no_args_is_help=True)
 
 
-def getdata(day: str, *, example=False):
+python_template = """\
+def main(data: str):
+    pass
+"""
+
+
+@app.command()
+def init(day: str):
+    """Create a new AOC challenge solution."""
+    pyfile = "day{}.py"
+    paths = ["data/day{}.txt", "data/day{}.example.txt"]
+    for p in paths:
+        pth = Path(p.format(day))
+        pth.touch()
+
+    pyfilepth = Path(pyfile.format(day))
+    if not pyfilepth.exists():
+        pyfilepth.write_text(python_template)
+
+
+def getdata(day: str, *, example: bool):
     suffix = ""
     if example:
         suffix = ".example"
 
-    file = f"data/day{day}{suffix}.txt"
+    file = Path(f"data/day{day}{suffix}.txt")
     try:
-        with open(file) as f:
-            return f.read()
+        return file.read_text()
     except FileNotFoundError:
-        print(f"ERR: Could not load data file {file}.", file=sys.stderr)
-        sys.exit(1)
+        raise click.FileError(str(file), "File does not exist")
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("day", type=str)
-    parser.add_argument("--example", action="store_true")
-
-    return parser.parse_args()
-
-
-def main(args):
-    data = getdata(args.day, example=args.example)
-    importlib.import_module(f"day{args.day}").main(data)
+@app.command()
+def run(day: str, example: bool = False):
+    """Run an aoc challenge"""
+    data = getdata(day, example=example)
+    return importlib.import_module(f"day{day}").main(data)
 
 
 if __name__ == "__main__":
-    sys.exit(main(get_args()))
+    sys.exit(app())
