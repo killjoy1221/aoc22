@@ -19,3 +19,7 @@ build-backend = "pdm.pep517.api"
 aoc = "aoc:app"
 
 [tool.pdm]
+[tool.pdm.dev-dependencies]
+dev = [
+    "black>=22.10.0",
+]
