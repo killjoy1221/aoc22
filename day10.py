@@ -19,7 +19,6 @@ class CPU:
         except StopIteration:
             self.current_op = None
         self.cycles += 1
-        self.render_crt()
 
     def addx(self, value: int):
         yield
@@ -55,6 +54,7 @@ def main(data: str):
     signals = []
     while True:
         try:
+            cpu.render_crt()
             cpu.tick()
         except StopIteration:
             break
