@@ -85,7 +85,7 @@ def keep_away(monkeys: list[Monkey]):
     relief = prod(m.tests.test_value for m in monkeys)
     for _ in range(1, 10_001):
         keep_away_round(monkeys, relief=relief)
-        print(f"\r{_/10000:.2%}", end="")
+        print(f"\r{f'{_/10000:.2%}':>7}", end="")
         if _ in (1, 20, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000):
             print(f"{_:6}", np.array([m.inspected for m in monkeys]))
 
