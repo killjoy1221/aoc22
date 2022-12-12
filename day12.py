@@ -50,17 +50,13 @@ class Location:
     status: Status = Status.UNKNOWN
 
 
+@dataclass
 class PathFinder:
-    def __init__(
-        self,
-        grid: np.ndarray,
-        start_pos: Position,
-        end_pos: Position,
-    ):
-        self.grid = grid
-        self.start_pos = start_pos
-        self.end_pos = end_pos
-        self.visited = set()
+    grid: np.ndarray
+    start_pos: Position
+    targets: list[Position]
+    reverse: bool
+    visited: set[Position]
 
     def get_height(self, pos: Position):
         return self.grid[pos.y, pos.x]
@@ -92,10 +88,14 @@ class PathFinder:
 
         old_height = self.get_height(old_pos)
         new_height = self.get_height(new_pos)
-        if new_pos in self.visited or (new_height - old_height) > 1:
+        if new_pos in self.visited or (
+            new_height - old_height < -1
+            if self.reverse
+            else new_height - old_height > 1
+        ):
             return Status.BLOCKED
 
-        if new_pos == self.end_pos:
+        if new_pos in self.targets:
             return Status.GOAL
 
         return Status.VALID
@@ -137,20 +137,23 @@ class HeightMap:
         end_y = end_pos // line_length
         self.end_pos = Position(end_x, end_y)
 
-    def find_all_positions_of(self, height: int):
-        return np.flip(np.argwhere(self.grid == height))
+    def find_all_positions_of(self, height: int) -> list[Position]:
+        return [Position(x, y) for y, x in np.argwhere(self.grid == height)]
 
     def find_shortest_path(
         self,
         start_pos: Position | None = None,
-        end_pos: Position | None = None,
+        targets: list[Position] | None = None,
+        *,
+        reverse: bool = False,
     ):
         if start_pos is None:
             start_pos = self.start_pos
-        if end_pos is None:
-            end_pos = self.end_pos
+        if targets is None:
+            targets = [self.end_pos]
 
-        return PathFinder(self.grid, start_pos, end_pos).find_shortest_path()
+        pf = PathFinder(self.grid, start_pos, targets, reverse, set())
+        return pf.find_shortest_path()
 
     def part_1(self):
         path = self.find_shortest_path()
@@ -160,13 +163,13 @@ class HeightMap:
             return len(path)
 
     def part_2(self):
-        paths = []
-        for start_pos in self.find_all_positions_of(0):
-            start_pos = Position(*start_pos)
-            path = self.find_shortest_path(start_pos)
-            if path is not None:
-                paths.append(len(path))
-        return min(paths)
+        targets = self.find_all_positions_of(0)
+        start_pos = self.end_pos
+        path = self.find_shortest_path(start_pos, targets, reverse=True)
+        if path is None:
+            return "No path found"
+        else:
+            return len(path)
 
 
 def main(data: str):
