@@ -1,60 +1,57 @@
-from dataclasses import dataclass
+from functools import cmp_to_key
+from typing import Iterator, Protocol, TypeVar
+
+Packet = list["Packet"] | int
+PacketPair = tuple[Packet, Packet]
+
+_T_contra = TypeVar("_T_contra", contravariant=True)
 
 
-PacketType = list["PacketType"] | int
+class SupportsCmp(Protocol[_T_contra]):
+    def __gt__(self, __other: _T_contra) -> bool:
+        ...
+
+    def __lt__(self, __other: _T_contra) -> bool:
+        ...
 
 
-@dataclass
-class Packet:
-    p: PacketType
-
-    def __lt__(self, other: "Packet"):
-        p1 = self.p
-        p2 = other.p
-        if isinstance(p1, int) and isinstance(p2, int):
-            return p1 < p2
-        if isinstance(p1, int):
-            return Packet([p1]) < other
-        if isinstance(p2, int):
-            return self < Packet([p2])
-
-        for pp1, pp2 in zip(p1, p2):
-            if Packet(pp1) < Packet(pp2):
-                return True
-            if Packet(pp2) < Packet(pp1):
-                return False
-
-        return len(p1) < len(p2)
+T_cmp = TypeVar("T_cmp", bound=SupportsCmp)
 
 
-@dataclass
-class PacketPair:
-    p1: Packet
-    p2: Packet
-
-    def compare(self) -> int:
-        if self.p1 < self.p2:
-            return -1
-        if self.p2 < self.p1:
-            return 1
-        return 0
+def cmp(a: T_cmp, b: T_cmp):
+    return (a > b) - (a < b)
 
 
-def read_packets(data: str):
+def packet_cmp(p1: Packet, p2: Packet):
+    if isinstance(p1, int) and isinstance(p2, int):
+        return cmp(p1, p2)
+    if isinstance(p1, int):
+        return packet_cmp([p1], p2)
+    if isinstance(p2, int):
+        return packet_cmp(p1, [p2])
+
+    for pp1, pp2 in zip(p1, p2):
+        if p_cmp := packet_cmp(pp1, pp2):
+            return p_cmp
+
+    return cmp(len(p1), len(p2))
+
+
+def read_packets(data: str) -> Iterator[PacketPair]:
     for chunk in data.split("\n\n"):
         packets = chunk.split("\n", 1)
-        p1, p2 = map(Packet, map(eval, packets))
-        yield PacketPair(p1, p2)
+        p1, p2 = map(eval, packets)
+        yield p1, p2
 
 
 def compare_packets(packets: list[PacketPair]):
-    for i, pair in enumerate(packets, start=1):
-        if pair.compare() < 0:
+    for i, (p1, p2) in enumerate(packets, start=1):
+        if packet_cmp(p1, p2) < 0:
             yield i
 
 
 def sort_packets(packets: list[Packet]):
-    return sorted(packets)
+    return sorted(packets, key=cmp_to_key(packet_cmp))
 
 
 def find_divider_indicies(packets: list[Packet], dividers: list[Packet]):
@@ -65,12 +62,12 @@ def main(data: str):
     packets = list(read_packets(data))
     print("Part 1:", sum(compare_packets(packets)))
 
-    divider_packets = [
-        Packet([[2]]),
-        Packet([[6]]),
+    divider_packets: list[Packet] = [
+        [[2]],
+        [[6]],
     ]
 
-    all_packets = [x for y in packets for x in [y.p1, y.p2]]
+    all_packets = [x for y in packets for x in y]
     all_packets += divider_packets
     sorted_packets = sort_packets(all_packets)
 
