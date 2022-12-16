@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import sys
 import importlib
-import typer
-import click
-
+import sys
 from pathlib import Path
+
+import click
+import typer
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -18,23 +18,26 @@ def main(data: str):
 @app.command()
 def init(day: str):
     """Create a new AOC challenge solution."""
-    pyfile = "day{}.py"
-    paths = ["data/day{}.txt", "data/day{}.example.txt"]
+    day_root = Path(f"day{day}")
+    day_root.mkdir(exist_ok=True)
+
+    pyfile = "__init__.py"
+    paths = ["data.txt", "example.txt"]
     for p in paths:
-        pth = Path(p.format(day))
+        pth = day_root / p
         pth.touch()
 
-    pyfilepth = Path(pyfile.format(day))
+    pyfilepth = day_root / pyfile
     if not pyfilepth.exists():
         pyfilepth.write_text(python_template)
 
 
 def getdata(day: str, *, example: bool):
-    suffix = ""
+    name = "data"
     if example:
-        suffix = ".example"
+        name = "example"
 
-    file = Path(f"data/day{day}{suffix}.txt")
+    file = Path(f"day{day}/{name}.txt")
     try:
         return file.read_text()
     except FileNotFoundError:

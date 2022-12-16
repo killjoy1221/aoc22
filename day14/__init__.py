@@ -1,6 +1,6 @@
+from enum import Enum, auto
 from itertools import pairwise
 from typing import NamedTuple
-from enum import Enum, auto
 
 
 class Position(NamedTuple):
